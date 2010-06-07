@@ -1,0 +1,1 @@
+A simple IRC bot which sources it's responses from an HTTP Server. Allowing any web language to produce a bot.
