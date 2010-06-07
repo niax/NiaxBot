@@ -76,7 +76,7 @@ class NiaxBot(SingleServerIRCBot):
 
 	def on_nicknameinuse(self, connection, event):
 		print "Nick in use"
-		c.nick(c.get_nickname() + "_")
+		connection.nick(connection.get_nickname() + "_")
 
 	def on_welcome(self, connection, event):
 		print "Wecomed"
