@@ -66,13 +66,13 @@ class Config:
 		
 
 class NiaxBot(SingleServerIRCBot):
-	def __init__(self, refresh, nickname, server, port=6667):
+	def __init__(self, refresh, nickname, server, port=6667, password=None):
 		rSplit = refresh.split('/')
 		self.refreshHost = rSplit[0]
 		self.refreshTarget = '/'.join(rSplit[1:])
 		self.config = Config()
 		print "Target is on %s at %s" % (self.refreshHost, self.refreshTarget)
-		SingleServerIRCBot.__init__(self, [(server, port)], nickname, nickname)
+		SingleServerIRCBot.__init__(self, [(server, port, password)], nickname, nickname)
 
 	def on_nicknameinuse(self, connection, event):
 		print "Nick in use"
@@ -141,10 +141,15 @@ class NiaxBot(SingleServerIRCBot):
 			httpcon.request("GET", "/%s" % target)
 			print "Requesting %s" % target
 			httpresponse = httpcon.getresponse()
+			if httpresponse.status != 200:
+				return
 			data = httpresponse.read()
 			for line in data.split('\n'):
 				s = Template(line)
 				line = s.safe_substitute(params)
+				line = line.strip()
+				if len(line) == 0:
+					continue
 				print "To %s: %s" % (source, line)
 				connection.privmsg(source, line)
 
@@ -155,20 +160,23 @@ def main():
 		print "Usage: NiaxBot <server[:port]> <nickname> <refresh>"
 		sys.exit(1)
 
-	s = sys.argv[1].split(":", 1)
+	s = sys.argv[1].split(":")
 	server = s[0]
-	if len(s) == 2:
+	password = None
+	if len(s) > 1:
 		try:
-			port = int(s[1])
+			port = int(s[1].strip(':'))
 		except ValueError:
-			print "Error: Erroneous port."
+			print "Error: Erroneous port (%s)." % s[1]
 			sys.exit(1)
+		if len(s) == 3:
+			password = s[2]
 	else:
 		port = 6667
 
 	nickname = sys.argv[2]
 	refresh = sys.argv[3]
-	bot = NiaxBot(refresh, nickname, server, port)
+	bot = NiaxBot(refresh, nickname, server, port, password)
 	bot.start()
 
 if __name__ == "__main__":
