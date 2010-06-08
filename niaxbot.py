@@ -157,7 +157,7 @@ class NiaxBot(SingleServerIRCBot):
 def main():
 	import sys
 	if len(sys.argv) < 4:
-		print "Usage: NiaxBot <server[:port]> <nickname> <refresh>"
+		print "Usage: NiaxBot <server[:port[:password]]> <nickname> <refresh>"
 		sys.exit(1)
 
 	s = sys.argv[1].split(":")
