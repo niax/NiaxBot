@@ -2,6 +2,7 @@ from ircbot import SingleServerIRCBot
 from irclib import nm_to_n, nm_to_h, irc_lower, ip_numstr_to_quad, ip_quad_to_numstr
 from httplib import HTTPConnection
 from string import Template
+import urllib
 import re
 
 class Config:
@@ -138,20 +139,23 @@ class NiaxBot(SingleServerIRCBot):
 				target = regex.sub(matches[r], string)
 				break
 		if target != "":
-			httpcon.request("GET", "/%s" % target)
+			params = urllib.urlencode(params)
+			headers = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/plain"}
+			httpcon.request("POST", "/%s" % target, params, headers)
 			print "Requesting %s" % target
 			httpresponse = httpcon.getresponse()
-			if httpresponse.status != 200:
-				return
 			data = httpresponse.read()
-			for line in data.split('\n'):
-				s = Template(line)
-				line = s.safe_substitute(params)
-				line = line.strip()
-				if len(line) == 0:
-					continue
-				print "To %s: %s" % (source, line)
-				connection.privmsg(source, line)
+			if httpresponse.status != 200:
+				print "Returned status code %d" % httpresonse.status
+				print "Content:"
+				print data
+			else:	
+				for line in data.split('\n'):
+					line = line.strip()
+					if len(line) == 0:
+						continue
+					print "To %s: %s" % (source, line)
+					connection.privmsg(source, line)
 
 
 def main():
