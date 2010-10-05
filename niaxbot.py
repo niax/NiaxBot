@@ -133,11 +133,6 @@ class NiaxBot(SingleServerIRCBot):
 		timeRecv = time()	
 		string = string.strip()
 		print "From %s: %s" % (source, string)
-		if source in self.floodProtect:
-			timeDiff = timeRecv - self.floodProtect[source]
-			if timeDiff < 30:
-				return
-		self.floodProtect[source] = timeRecv
 		params = { 'user': nm_to_n(event.source()) }
 		httpcon = HTTPConnection(self.refreshHost)
 		target = ""
@@ -147,6 +142,11 @@ class NiaxBot(SingleServerIRCBot):
 				target = regex.sub(matches[r], string)
 				break
 		if target != "":
+			if source in self.floodProtect:
+				timeDiff = timeRecv - self.floodProtect[source]
+				if timeDiff < 30:
+					return
+			self.floodProtect[source] = timeRecv
 			params = urllib.urlencode(params)
 			headers = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/plain"}
 			httpcon.request("POST", "/%s" % target, params, headers)
@@ -193,5 +193,3 @@ def main():
 
 if __name__ == "__main__":
 	main()
-
-# This is a test
