@@ -2,6 +2,7 @@ from ircbot import SingleServerIRCBot
 from irclib import nm_to_n, nm_to_h, irc_lower, ip_numstr_to_quad, ip_quad_to_numstr
 from httplib import HTTPConnection
 from string import Template
+from time import time
 import urllib
 import re
 
@@ -72,6 +73,7 @@ class NiaxBot(SingleServerIRCBot):
 		self.refreshHost = rSplit[0]
 		self.refreshTarget = '/'.join(rSplit[1:])
 		self.config = Config()
+		self.floodProtect = {}
 		print "Target is on %s at %s" % (self.refreshHost, self.refreshTarget)
 		SingleServerIRCBot.__init__(self, [(server, port, password)], nickname, nickname)
 
@@ -128,8 +130,14 @@ class NiaxBot(SingleServerIRCBot):
 				connection.join(i, self.config.channels[i])		
 
 	def do_receive(self, connection, event, matches, source, string):
+		timeRecv = time()	
 		string = string.strip()
 		print "From %s: %s" % (source, string)
+		if source in self.floodProtect:
+			timeDiff = timeRecv - self.floodProtect[source]
+			if timeDiff < 30:
+				return
+		self.floodProtect[source] = timeRecv
 		params = { 'user': nm_to_n(event.source()) }
 		httpcon = HTTPConnection(self.refreshHost)
 		target = ""
