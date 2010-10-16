@@ -154,7 +154,7 @@ class NiaxBot(SingleServerIRCBot):
 			httpresponse = httpcon.getresponse()
 			data = httpresponse.read()
 			if httpresponse.status != 200:
-				print "Returned status code %d" % httpresonse.status
+				print "Returned status code %d" % httpresponse.status
 				print "Content:"
 				print data
 			else:	
