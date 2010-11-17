@@ -191,7 +191,7 @@ class NiaxBot(SingleServerIRCBot):
 			data = httpresponse.read()
 			if httpresponse.status != 200:
 				# The server returned something other than 200 (OK) so print out what happened
-				print "Returned status code %d" % httpresonse.status
+				print "Returned status code %d" % httpresponse.status
 				print "Content:"
 				print data
 			else:	
