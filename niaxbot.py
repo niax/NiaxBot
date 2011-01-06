@@ -141,11 +141,14 @@ class NiaxBot(SingleServerIRCBot):
 	def do_update(self, connection):
 		"""Pull in a new configuration file"""
 		# Create the connection and request the target
-		httpcon = HTTPConnection(self.refreshHost)
-		httpcon.request("GET", "/%s" % self.refreshTarget)
-		# Get the response and parse it
-		httpresponse = httpcon.getresponse()
-		self.config.parse(httpresponse.read())
+		try:
+			httpcon = HTTPConnection(self.refreshHost)
+			httpcon.request("GET", "/%s" % self.refreshTarget)
+			# Get the response and parse it
+			httpresponse = httpcon.getresponse()
+			self.config.parse(httpresponse.read())
+		except Exception, ex:
+			print "Error updating config:", ex
 
 		# Join all the channels in the config
 		for i in self.config.channels:
@@ -165,8 +168,6 @@ class NiaxBot(SingleServerIRCBot):
 		print "From %s: %s" % (source, string)
 		# Create the POST params
 		params = { 'user': nm_to_n(event.source()) }
-		# Set up the connection
-		httpcon = HTTPConnection(self.refreshHost)
 		target = ""
 		# For all of the regex it could be, see if it matches, and if it is set the target given the replacement string.
 		for r in matches:
@@ -185,24 +186,28 @@ class NiaxBot(SingleServerIRCBot):
 			# Do the request
 			params = urllib.urlencode(params)
 			headers = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/plain"}
-			httpcon.request("POST", "/%s" % target, params, headers)
-			print "Requesting %s" % target
-			httpresponse = httpcon.getresponse()
-			data = httpresponse.read()
-			if httpresponse.status != 200:
-				# The server returned something other than 200 (OK) so print out what happened
-				print "Returned status code %d" % httpresponse.status
-				print "Content:"
-				print data
-			else:	
-				# The server returned OK so put that to the channel, line by line
-				for line in data.split('\n'):
-					line = line.strip()
-					if len(line) == 0:
-						continue
-					print "To %s: %s" % (source, line)
-					connection.privmsg(source, line)
-
+			try:
+				# Set up the connection
+				httpcon = HTTPConnection(self.refreshHost)
+				httpcon.request("POST", "/%s" % target, params, headers)
+				print "Requesting %s" % target
+				httpresponse = httpcon.getresponse()
+				data = httpresponse.read()
+				if httpresponse.status != 200:
+					# The server returned something other than 200 (OK) so print out what happened
+					print "Returned status code %d" % httpresponse.status
+					print "Content:"
+					print data
+				else:	
+					# The server returned OK so put that to the channel, line by line
+					for line in data.split('\n'):
+						line = line.strip()
+						if len(line) == 0:
+							continue
+						print "To %s: %s" % (source, line)
+						connection.privmsg(source, line)
+			except Exception, ex:
+				print "Error fetching:", ex
 
 def main():
 	import sys
