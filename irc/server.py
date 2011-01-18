@@ -11,14 +11,15 @@ class IrcServer(IrcConnection):
         self.user('niaxbot', socket.gethostname(), 'Niaxbot')
         self.welcomed = False
         self.add_protocol_handler('376', self._motd_end)
-    
+        self.add_protocol_handler('PRIVMSG', self._privmsg)
 
     # Server responses
     def _motd_end(self, connection, prefix, command, parameters):
         self.welcomed = True
 
     def _privmsg(self, connection, prefix, command, parameters):
-        pass 
+        (chan, message) = parameters
+        print "%s %s: %s" % (chan, prefix, message)
 
     # IRC Commands
     def nick(self, nick):
