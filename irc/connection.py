@@ -65,8 +65,8 @@ class IrcConnection(object):
             if regex.match(command):
                 function(self, prefix, command, params)
                 has_matched = True
-        if not has_matched:
-            print message
+        #if not has_matched:
+        #    print message
 
     def _process_params(self, params):
         if params.startswith(':'):
