@@ -16,15 +16,13 @@ def localloop(client):
             sys.exc_clear()
         gevent.socket.wait_read(sys.stdin.fileno())
 
-def private(arguments):
-    (server, message, query, prefix) = arguments
+def private(server, message, query, prefix):
     if query.is_channel():
         logger.info('%s %s: %s' % (query.name, prefix['nick'], message))
     else:
         logger.info('PM %s: %s' % (prefix['nick'], message))
 
-def ctcp_cmd(arguments):
-    (server, message, query, prefix) = arguments
+def ctcp_cmd(server, message, query, prefix):
     if query.is_channel():
         logger.info('CTCP %s %s: %s' % (query.name, prefix['nick'], message))
     else:

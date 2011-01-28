@@ -105,8 +105,7 @@ class IrcServer(object):
 
 
 # Signal Handlers
-def server_incoming(arguments):
-    (server, message) = arguments
+def server_incoming(server, message):
     message = message.strip()
     if message == '':
         return # Ignore empty messages
@@ -117,8 +116,7 @@ def server_incoming(arguments):
     signals.emit('server event', (server, data, prefix))
     
 
-def server_event(arguments):
-    (server, data, prefix) = arguments 
+def server_event(server, data, prefix):
     data = data.strip()
     cmd_match = re.match("(?P<command>[^ ]+) (?P<params>.*)", data)
     command, params = cmd_match.group('command'), cmd_match.group('params')
@@ -141,14 +139,13 @@ def _process_params(params):
 def _process_prefix(prefix):
     if prefix == None:
         return None
-    prefix_match = re.match(r'(?P<nick>[^@!]+)(!(?P<user>[^@]+))?(@(?P<host>.+))?', prefix)
+    prefix_match = re.match(r':(?P<nick>[^@!]+)(!(?P<user>[^@]+))?(@(?P<host>.+))?', prefix)
     return { 'nick': prefix_match.group('nick'),
              'user': prefix_match.group('user'),
              'host': prefix_match.group('host') }
 
 
-def _ping_handler(arguments):
-    (server, parameters, prefix) = arguments
+def _ping_handler(server, parameters, prefix):
     server.pong(parameters)
 
 # Add signal handlers

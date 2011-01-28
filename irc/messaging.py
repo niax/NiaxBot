@@ -21,17 +21,14 @@ class IrcChannel(Query):
     def is_channel(self):
         return True
 
-    def _namelist(self, parameters):
-        (server, params, prefix) = parameters
+    def _namelist(self, server, params, prefix):
         if server == self.server and params[-2] == self.name: # params[0] is the channel
             for user in params[-1].split(' '):
                 self.users.append(user)
 
-    def _synchronized(self, parameters):
-        (server, params, prefix) = parameters
+    def _synchronized(self, server, params, prefix):
         if server == self.server and params[-2] == self.name:
             signals.emit('channel synchronized', (server, self))
-            self.say(str(self.users))
 
 
 # Signal Handlers
@@ -41,12 +38,10 @@ def _process_ctcp_cmd(message):
         return message
     return None
 
-def _join_handler(arguments):
-    (server, parameters, prefix) = arguments
+def _join_handler(server, parameters, prefix):
     server._add_channel(parameters[0])
 
-def _privmsg_handler(arguments):
-    (server, parameters, prefix) = arguments
+def _privmsg_handler(server, parameters, prefix):
     message = parameters[-1]
     ctcp_cmd = _process_ctcp_cmd(message)
     target = parameters[-2]

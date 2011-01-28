@@ -30,7 +30,7 @@ signal_mappings = {
 
 def _signal_rewrite(new):
     """ Returns a function that re-emits a signal under a different name as defined by new """
-    return lambda params: signals.emit(new, params)
+    return lambda *params: signals.emit(new, params)
 
 # Add rewrite signal handlers
 for mapping in signal_mappings.keys():

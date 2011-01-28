@@ -18,7 +18,7 @@ class SignalHandler(object):
     def emit(self, signal, arguments):
         for functionlist in (self.first, self.functions, self.last):
             for function in functionlist:
-                function(arguments)
+                function(*arguments) # *arguments unfolds the list of arguments
 
 handlers = {} # Hash between signal names and SignalHandler
 logger = logging.getLogger('irc')
