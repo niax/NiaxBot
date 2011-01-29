@@ -45,6 +45,9 @@ class IrcServer(object):
     def pong(self, parameters):
         self.send_command('PONG', ':' + ' '.join(parameters))
 
+    def quit(self, message):
+        self.send_command('QUIT', message)
+
     ## Internal functions
 
     def _add_channel(self, channelname):
@@ -74,30 +77,53 @@ class IrcServer(object):
         self.user(self.username, self.hostname, self.realname)
         self.nick(self.nickname)
 
+    def disconnect(self, message=''):
+        if not self.connected:
+            return # We can't disconnect as we're not connected
+
+        self.connected = False
+        self.quit(message)
+
+        try:
+            self.socket.close()
+        except socket.error, e:
+            pass
+
+        self.socket = None
+        signals.emit('server disconnect', (self))
+
     def _loop(self):
-        newdata = '' # Empty out newdata so we can append to it later
-        while True:
+        previous_buffer = ''
+        while self.connected:
             try:
                 logging.getLogger('irc').debug('getting data')
-                newdata = newdata + self.socket.recv(1024)
+                newdata = self.socket.recv(1024)
                 logging.getLogger('irc').debug('got data')
-                lines = newdata.split('\r\n')
+                lines = (previous_buffer + newdata).split('\r\n')
+
+                if not newdata:
+                    # No data returned from recv - assume connection is broken
+                    self.disconnect('Connection reset by peer')
+                    continue
                 # If newdata cuts off the end of a command, store it and we'll get the rest next time through
                 if not newdata.endswith('\r\n'):
-                    newdata = lines.pop()
+                    previous_buffer = lines.pop()
                 else:
-                    newdata = '' # Clear it out for the next time round
+                    previous_buffer = '' # Clear it out for the next time round
 
                 for line in lines:
                     signals.emit('server incoming', (self, line))
             except socket.error, e:
-                print e
-                return
+                self.disconnect(e[1]) # Element 1 is the error message
+                continue
 
     def send_command(self, command, *args):
         message = command + ' ' +  ' '.join(args) + '\r\n'
         logging.getLogger('irc').info(message.strip())
-        self.socket.send(message)
+        try:
+            self.socket.send(message)
+        except socket.error, e:
+            self.disconnect(e[1]) # Disconnect because of the error.
 
     # gevent stuff
     def wait(self):
