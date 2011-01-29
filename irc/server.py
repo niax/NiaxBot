@@ -53,6 +53,12 @@ class IrcServer(object):
     def _add_channel(self, channelname):
         channel = IrcChannel(self, channelname)
         self.queries[channelname] = channel
+        signals.emit('server channel joined', (self, channel))
+
+    def _del_channel(self, channelname):
+        channel = self.queries[channelname]
+        del self.queries[channelname]
+        signals.emit('server channel parted', (self, channel))
 
     def _get_query(self, target):
         # Create a query if we don't already know about it
@@ -90,15 +96,13 @@ class IrcServer(object):
             pass
 
         self.socket = None
-        signals.emit('server disconnect', (self))
+        signals.emit('server disconnect', (self, message))
 
     def _loop(self):
         previous_buffer = ''
         while self.connected:
             try:
-                logging.getLogger('irc').debug('getting data')
                 newdata = self.socket.recv(1024)
-                logging.getLogger('irc').debug('got data')
                 lines = (previous_buffer + newdata).split('\r\n')
 
                 if not newdata:

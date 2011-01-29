@@ -41,4 +41,4 @@ def emit(signal, arguments):
     if signal in handlers:
         handlers[signal].emit(signal, arguments)
     else:
-        logger.debug('No handlers for signal %s' % signal)
+        logger.debug('No handlers for signal %s (params: %s)' % (signal, arguments))

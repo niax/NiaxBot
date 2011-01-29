@@ -30,6 +30,14 @@ class IrcChannel(Query):
         if server == self.server and params[-2] == self.name:
             signals.emit('channel synchronized', (server, self))
 
+    def _user_join(self, prefix):
+        self.users.append(prefix['nick'])
+        signals.emit('channel join', (self, prefix))
+
+    def _user_part(self, prefix):
+        self.users.remove(prefix['nick'])
+        signals.emit('channel part', (self, prefix))
+
 
 # Signal Handlers
 def _process_ctcp_cmd(message):
@@ -39,7 +47,18 @@ def _process_ctcp_cmd(message):
     return None
 
 def _join_handler(server, parameters, prefix):
-    server._add_channel(parameters[0])
+    if prefix['nick'] == server.nickname:
+        server._add_channel(parameters[0]) # This is us joining a channel
+    else:
+        server._get_query(parameters[0])._user_join(prefix)
+
+def _part_handler(server, parameters, prefix):
+    target = parameters[0]
+    if prefix['nick'] == server.nickname:
+        server._del_channel(target)
+    else:
+        server._get_query(target)._user_part(prefix)
+
 
 def _privmsg_handler(server, parameters, prefix):
     message = parameters[-1]
@@ -57,4 +76,4 @@ def _privmsg_handler(server, parameters, prefix):
 # Add Signal Handlerss
 signals.add_first('event privmsg', _privmsg_handler)
 signals.add_first('event join', _join_handler)
-
+signals.add_first('event part', _part_handler)
