@@ -1,9 +1,11 @@
 import gevent
 from gevent import monkey; monkey.patch_socket()
 import logging
+import sys
 
 from irc.server import IrcServer
 import irc.signals
+import irc.plugins
 
 def localloop(client):
     import fcntl, sys, os
@@ -11,23 +13,23 @@ def localloop(client):
     while True:
         try:
             line = sys.stdin.readline()
-            client.send_command(line)
+            line = line.strip()
+            if line.startswith('/'):
+                linesplit = line.split(' ')
+                try:
+                    irc.signals.emit('command %s' % linesplit[0][1:], (' '.join(linesplit[1:]),))
+                except Exception, ex:
+                    logger.error(ex.message)
+
+            else:
+                client.send_command(line)
         except IOError:
             sys.exc_clear()
         gevent.socket.wait_read(sys.stdin.fileno())
 
-def private(server, message, query, prefix):
-    if query.is_channel():
-        logger.info('%s %s: %s' % (query.name, prefix['nick'], message))
-    else:
-        logger.info('PM %s: %s' % (prefix['nick'], message))
 
-def ctcp_cmd(server, message, query, prefix):
-    if query.is_channel():
-        logger.info('CTCP %s %s: %s' % (query.name, prefix['nick'], message))
-    else:
-        logger.info('PM CTCP %s: %s' % (prefix['nick'], message))
-
+def nick_in_use(server, data, prefix):
+    server.nick(server.nickname + '_')
 
 logger = logging.getLogger('irc')
 
@@ -39,9 +41,7 @@ if __name__ == '__main__':
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 
-    irc.signals.add('message private', private)
-    irc.signals.add('ctcp cmd', ctcp_cmd)
-    
+    irc.signals.add('event 433', nick_in_use)
 
     client = IrcServer()
     client.nick('Niaxbot-v2')

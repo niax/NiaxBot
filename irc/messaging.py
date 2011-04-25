@@ -70,7 +70,10 @@ def _privmsg_handler(server, parameters, prefix):
     if ctcp_cmd != None:
         signals.emit('ctcp cmd', (server, message, query, prefix))
     else:
-        signals.emit('message private', (server, message, query, prefix))
+        if type(query) == IrcChannel: # If we're in a public channel
+            signals.emit('message public', (server, message, query, prefix))
+        else:
+            signals.emit('message private', (server, message, query, prefix))
 
 
 # Add Signal Handlerss
