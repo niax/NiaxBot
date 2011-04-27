@@ -11,6 +11,12 @@ class Query(object):
     def say(self, tosay):
         self.server.privmsg(self.name, tosay)
 
+    def ctcp(self, message):
+        self.server.privmsg(self.name, '\001%s\001' % message)
+
+    def ctcp_reply(self, message):
+        self.server.notice(self.name, '\001%s\001' % message)
+
 class IrcChannel(Query):
     def __init__(self, server, name):
         super(IrcChannel, self).__init__(server, name)
@@ -42,7 +48,7 @@ class IrcChannel(Query):
 # Signal Handlers
 def _process_ctcp_cmd(message):
     if message.startswith('\001') and message.endswith('\001'): # Then it's a CTCP command
-        message = message[1:-2] # Trim either end
+        message = message[1:-1] # Trim either end
         return message
     return None
 
@@ -68,7 +74,12 @@ def _privmsg_handler(server, parameters, prefix):
         target = prefix["nick"]
     query = server._get_query(target)
     if ctcp_cmd != None:
-        signals.emit('ctcp cmd', (server, message, query, prefix))
+        split = ctcp_cmd.find(' ')
+        message = ''
+        if split > -1:
+            message = ctcp_cmd[split:]
+            ctcp_cmd = ctcp_cmd[:split]
+        signals.emit('ctcp cmd', (server, ctcp_cmd, message, query, prefix))
     else:
         if type(query) == IrcChannel: # If we're in a public channel
             signals.emit('message public', (server, message, query, prefix))

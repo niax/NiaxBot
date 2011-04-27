@@ -19,7 +19,10 @@ class SignalHandler(object):
     def emit(self, signal, arguments):
         for functionlist in (self.first, self.functions, self.last):
             for function in functionlist:
-                function(*arguments) # *arguments unfolds the list of arguments
+                try:
+                    function(*arguments) # *arguments unfolds the list of arguments
+                except:
+                    logger.exception("Error handling signal %s on handler %s" % (signal, function))
 
     def unbind_module(self, module):
         self.first = self._unbind_module_list(module, self.first)
@@ -31,7 +34,7 @@ class SignalHandler(object):
         
 
 handlers = {} # Hash between signal names and SignalHandler
-logger = logging.getLogger('irc')
+logger = logging.getLogger('irc.signals')
 
 def _handler(signal):
     if not signal in handlers:

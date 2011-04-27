@@ -4,7 +4,7 @@ import logging
 import os.path
 
 modules = {} # Hash between path and modules objects
-logger = logging.getLogger('irc')
+logger = logging.getLogger('irc.plugins')
 
 def _get_name(path):
     name = os.path.basename(path)
@@ -13,7 +13,8 @@ def _get_name(path):
     
 def load_plugin(path):
     name = _get_name(path)
-    if name in modules:
+    if path in modules:
+        logger.info("Reloading %s" % name)
         reload_plugin(path)
     else:
         logger.info("Loading %s" % name)
@@ -28,19 +29,20 @@ def unload_plugin(path):
 
 def reload_plugin(path):
     unload_plugin(path)
-    reload_plugin(path)
+    load_plugin(path)
 
 def command(args):
     argsplit = args.split(' ') 
-    print argsplit
     cmd = argsplit[0]
     path = ' '.join(argsplit[1:])
-    print path
     if cmd == 'load':
         load_plugin(path)
     elif cmd == 'reload':
         reload_plugin(path)
     elif cmd == 'unload':
         unload_plugin(path)
+    elif cmd == 'list':
+        for module in modules:
+            logger.info(module)
 
 signals.add("command plugin", command)

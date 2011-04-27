@@ -19,7 +19,7 @@ def localloop(client):
                 try:
                     irc.signals.emit('command %s' % linesplit[0][1:], (' '.join(linesplit[1:]),))
                 except Exception, ex:
-                    logger.error(ex.message)
+                    logger.error(ex)
 
             else:
                 client.send_command(line)
@@ -27,21 +27,25 @@ def localloop(client):
             sys.exc_clear()
         gevent.socket.wait_read(sys.stdin.fileno())
 
+def on_ctcp(server, command, message, query, prefix):
+    if command == "VERSION" and message == "": # VERSION request
+        query.ctcp_reply("VERSION NiaxBot https://www.github.com/niax/NiaxBot")
 
 def nick_in_use(server, data, prefix):
     server.nick(server.nickname + '_')
 
-logger = logging.getLogger('irc')
+logger = logging.getLogger('client')
 
 if __name__ == '__main__':
-    logger.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
+    console = logging.StreamHandler()
+    console.setLevel(logging.DEBUG)
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    console.setFormatter(formatter)
+    logging.getLogger('').addHandler(console) # Pull the root logger
+    logging.getLogger('').setLevel(logging.DEBUG)
 
     irc.signals.add('event 433', nick_in_use)
+    irc.signals.add('ctcp cmd', on_ctcp)
 
     client = IrcServer()
     client.nick('Niaxbot-v2')

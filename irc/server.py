@@ -38,6 +38,9 @@ class IrcServer(object):
     def privmsg(self, target, content):
         self.send_command('PRIVMSG', target, ':' + content)
 
+    def notice(self, target, content):
+        self.send_command('NOTICE', target, ':' + content)
+
     # Misc commands
     def ping(self):
         self.send_command('PING', ':' + self.server)
@@ -123,7 +126,7 @@ class IrcServer(object):
 
     def send_command(self, command, *args):
         message = command + ' ' +  ' '.join(args) + '\r\n'
-        logging.getLogger('irc').info(message.strip())
+        logging.getLogger('irc.server').debug(message.strip())
         try:
             self.socket.send(message)
         except socket.error, e:
@@ -139,7 +142,7 @@ def server_incoming(server, message):
     message = message.strip()
     if message == '':
         return # Ignore empty messages
-    logging.getLogger('irc').info(message)
+    logging.getLogger('irc.server').debug(message)
     prefix_match = re.match('(?P<prefix>:[^ ]* )?(?P<data>.*)', message)
     prefix, data = prefix_match.group('prefix'), prefix_match.group('data')
     prefix = _process_prefix(prefix)
