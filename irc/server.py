@@ -1,5 +1,5 @@
 import gevent
-from gevent import monkey; monkey.patch_socket()
+import gevent.socket
 
 import socket
 import re
@@ -7,6 +7,7 @@ import logging
 
 import signals
 import response_mappings
+import settings
 from messaging import IrcChannel, Query
 
 class IrcServer(object):
@@ -15,6 +16,8 @@ class IrcServer(object):
         self.user('niaxbot', socket.gethostname(), 'Niaxbot')
         self.welcomed = False
         self.queries = {}
+        self.logger = logging.getLogger('irc.server')
+        self.raw_logger = logging.getLogger('irc.server.raw')
 
     ## IRC Commands
     # Auth Commands
@@ -73,10 +76,13 @@ class IrcServer(object):
     # Networking
     def connect(self, server, port=6667):
         self.server = server
+
+        # Change logger so we have per-server loging
+        self.logger = logging.getLogger('irc.server (%s:%s)' % (server, port))
+        self.raw_logger = logging.getLogger('irc.server.raw (%s:%s)' % (server, port))
         
         # Connection
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.connect((server, port))
+        self.socket = gevent.socket.create_connection((server, port))
         self.connected = True
 
         # Enter read loop
@@ -96,7 +102,7 @@ class IrcServer(object):
         try:
             self.socket.close()
         except socket.error, e:
-            pass
+            self.logger.exception("Error at disconnection")
 
         self.socket = None
         signals.emit('server disconnect', (self, message))
@@ -119,14 +125,19 @@ class IrcServer(object):
                     previous_buffer = '' # Clear it out for the next time round
 
                 for line in lines:
+                    message = line.strip()
+                    if message == '':
+                        continue # Ignore empty messages
+                    self.raw_logger.debug('<' + message)
                     signals.emit('server incoming', (self, line))
             except socket.error, e:
                 self.disconnect(e[1]) # Element 1 is the error message
                 continue
+        self.logger.info("Server loop exiting")
 
     def send_command(self, command, *args):
         message = command + ' ' +  ' '.join(args) + '\r\n'
-        logging.getLogger('irc.server').debug(message.strip())
+        self.raw_logger.debug('>' + message.strip())
         try:
             self.socket.send(message)
         except socket.error, e:
@@ -134,15 +145,14 @@ class IrcServer(object):
 
     # gevent stuff
     def wait(self):
+        self.logger.debug("Waiting for main server loop to end")    
         self.greenlet.join()
+        self.logger.debug("Done waiting for main server loop to end")    
 
 
 # Signal Handlers
 def server_incoming(server, message):
     message = message.strip()
-    if message == '':
-        return # Ignore empty messages
-    logging.getLogger('irc.server').debug(message)
     prefix_match = re.match('(?P<prefix>:[^ ]* )?(?P<data>.*)', message)
     prefix, data = prefix_match.group('prefix'), prefix_match.group('data')
     prefix = _process_prefix(prefix)

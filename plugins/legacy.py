@@ -1,4 +1,5 @@
 import irc.signals
+import irc.settings
 from httplib import HTTPConnection
 from string import Template
 from time import time
@@ -79,8 +80,6 @@ class Config:
 
 logger = logging.getLogger("legacy")
 config = Config()
-refreshHost = 'icanhas.niax.co.uk'
-refreshTarget = '/test.txt'
 floodProtect = {}
         
 def welcomed(server, arg):
@@ -109,7 +108,15 @@ def do_update(server):
     """Pull in a new configuration file"""
     # Create the connection and request the target
     try:
-        # TODO: Tie this in to config backend
+        refreshHost = irc.settings.get('legacy_refreshHost')
+        refreshTarget = irc.settings.get('legacy_refreshTarget')
+
+        if refreshHost == None:
+            logger.warn("Refresh Host is not set (please set legacy_refreshHost)")
+            return
+        if refreshTarget == None:
+            logger.warn("Refresh Target is not set (please set legacy_refreshTarget)")
+            return
         httpcon = HTTPConnection(refreshHost)
         httpcon.request("GET", "/%s" % refreshTarget)
         # Get the response and parse it
@@ -153,6 +160,10 @@ def do_receive(server, message, query, prefix, matches):
         params = urllib.urlencode(params)
         headers = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/plain"}
         try:
+            refreshHost = irc.settings.get('legacy_refreshHost')
+            if refreshHost == None:
+                logger.warn("Refresh Host is not set (please set legacy_refreshHost)")
+                return
             # Set up the connection
             httpcon = HTTPConnection(refreshHost)
             httpcon.request("POST", "/%s" % target, params, headers)

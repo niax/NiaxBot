@@ -16,6 +16,10 @@ signal_mappings = {
     '253': 'network count unknowns',
     '254': 'network count channels',
     '255': 'server count user',
+
+    # Channel Topic Events
+    '332': 'server topic',
+    '333': 'server topic_by',
     
     # Names reply
     '353': 'server name reply',
