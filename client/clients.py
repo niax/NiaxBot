@@ -12,8 +12,6 @@ from irc.server import IrcServer
 import irc.signals
 import irc.plugins
 
-from client.widgets import MainWidget, GEventEventLoop
-
 class BasicClient(object):
     VERSIONSTRING = "PyRC v0.0.1 (First Steps) - https://github.com/niax/Niaxbot"
 
@@ -39,7 +37,6 @@ class BasicClient(object):
 
     def run(self):
         # TODO: Implement proper plugin autoload
-        irc.plugins.load_plugin('plugins/web/web.py')
         self.running = True
         try:
             loop = gevent.spawn(self.localloop)
@@ -107,34 +104,4 @@ class BasicClient(object):
 
     def nick_in_use(self, server, data, prefix):
         server.nick(server.nickname + '_')
-
-
-
-class CursesClient(BasicClient):
-
-    def __init__(self):
-        super(CursesClient, self).__init__()
-        irc.signals.add('server motd content', self._motd)
-
-    def localloop(self):
-        self.mainwidget = MainWidget(self)
-        self.palette = [
-            ('status', 'default', 'dark blue'),
-            ('status-seperator', 'light cyan', 'dark blue'),
-            ('title', 'default', 'dark blue'),
-        ]
-
-        import urwid.curses_display
-        self.mainloop = urwid.MainLoop(self.mainwidget, palette = self.palette, event_loop = GEventEventLoop(), unhandled_input = self.unhandled, handle_mouse = False, screen = urwid.curses_display.Screen())
-        self.mainloop.run()
-
-    def quit(self, args):
-        super(CursesClient, self).quit(args)
-        self.mainloop.event_loop.stop()
-
-    def unhandled(self, k):
-        self.logger.debug("Unhandled key: %s" % str(k))
-
-    def _motd(self, server, params, prefix):
-        self.mainwidget.statuswindow.add_line('[%s] %s' % (server.server, params[-1]))
 
