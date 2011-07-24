@@ -18,6 +18,7 @@ def cmd_authorize(args):
         return
     client = oauth.Client(consumer)
 
+    # First get a temp token (kinda like anon access but against our app - used only for auth)
     logger.debug('Requesting temp token from Twitter')
     resp, content = client.request(request_token_url,  'GET')
     if resp['status'] != '200':
@@ -27,6 +28,8 @@ def cmd_authorize(args):
     # Global this so we can get it when we come back
     global request_token
     request_token = dict(parse_qsl(content))
+
+    # Send people on to the authorization step. This will give them a pin number
     logger.info('To authorize this, go to %s?oauth_token=%s' % (authorization_url, request_token['oauth_token']))
     logger.info('And then use /twitter_auth_complete <pin> to complete')
 
@@ -35,19 +38,20 @@ def cmd_authorize_complete(args):
     if consumer == None:
         return
     pin = args
-    logger.debug('"%s"' % pin)
-    logger.debug(request_token)
+
+    # Create a token with our temp values
     token = oauth.Token(request_token['oauth_token'], request_token['oauth_token_secret'])
+    # Verify with the PIN given to us
     token.set_verifier(pin)
+    # Recreate the client with the token
     client = oauth.Client(consumer, token)
+    # Request a real access token from Twitter
     resp, content = client.request(access_token_url, 'POST', body='oauth_verifier=%s' % pin)
     if resp['status'] != '200':
         logger.error('Failed to get access token from Twitter. Response code %s' % resp['status'])
-        logger.debug(resp)
-        logger.debug(content)
         return
     access_token = dict(parse_qsl(content))
-    logger.debug(access_token)
+    # Store the access token we get back
     irc.settings.set('twitter.oauth.access_token', access_token['oauth_token'])
     irc.settings.set('twitter.oauth.access_secret', access_token['oauth_token_secret'])
 
@@ -75,7 +79,7 @@ def on_public(server, message, query, prefix):
             query.say('Message must be 140 characters or less')
         else:
             twitter_api.PostUpdate(message)
-            query.say('Sent to twitter')
+            query.say('Sent to twitter: %s' % message)
             
 
 def try_api_create():
