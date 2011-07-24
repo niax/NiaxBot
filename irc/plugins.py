@@ -17,7 +17,7 @@ def load_plugin(path):
         logger.info("Reloading %s" % name)
         reload_plugin(path)
     else:
-        logger.info("Loading %s" % name)
+        logger.info("Loading %s from %s" % (name, path))
         modules[path] = imp.load_source(name, path)
 
 def unload_plugin(path):

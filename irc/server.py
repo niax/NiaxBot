@@ -111,7 +111,8 @@ class IrcServer(object):
         previous_buffer = ''
         while self.connected:
             try:
-                newdata = self.socket.recv(1024)
+                gevent.sleep() # Force a yield. We want to be fair to other connections
+                newdata = self.socket.recv(512)
                 lines = (previous_buffer + newdata).split('\r\n')
 
                 if not newdata:

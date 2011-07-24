@@ -38,6 +38,8 @@ class BasicClient(object):
             irc.signals.add('command %s' % command, command_mapping[command])
 
     def run(self):
+        # TODO: Implement proper plugin autoload
+        irc.plugins.load_plugin('plugins/web/web.py')
         self.running = True
         try:
             loop = gevent.spawn(self.localloop)
@@ -109,21 +111,21 @@ class BasicClient(object):
 
 
 class CursesClient(BasicClient):
+
     def __init__(self):
         super(CursesClient, self).__init__()
         irc.signals.add('server motd content', self._motd)
 
-
     def localloop(self):
-
         self.mainwidget = MainWidget(self)
         self.palette = [
-            ('status', 'white', 'dark blue'),
-            ('status-seperator', 'light blue', 'dark blue'),
-            ('title', 'white', 'dark blue'),
+            ('status', 'default', 'dark blue'),
+            ('status-seperator', 'light cyan', 'dark blue'),
+            ('title', 'default', 'dark blue'),
         ]
 
-        self.mainloop = urwid.MainLoop(self.mainwidget, palette = self.palette, event_loop = GEventEventLoop(), unhandled_input = self.unhandled, handle_mouse=False)
+        import urwid.curses_display
+        self.mainloop = urwid.MainLoop(self.mainwidget, palette = self.palette, event_loop = GEventEventLoop(), unhandled_input = self.unhandled, handle_mouse = False, screen = urwid.curses_display.Screen())
         self.mainloop.run()
 
     def quit(self, args):
@@ -135,3 +137,4 @@ class CursesClient(BasicClient):
 
     def _motd(self, server, params, prefix):
         self.mainwidget.statuswindow.add_line('[%s] %s' % (server.server, params[-1]))
+

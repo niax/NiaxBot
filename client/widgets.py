@@ -7,6 +7,8 @@ class GEventEventLoop(object):
     def __init__(self):
         self._alarms = []
         self._watch_files = []
+        self._idle_callbacks = {}
+        self._idle_handle = 0
         self.logger = logging.getLogger("client.eventloop")
         self.running = False
 
@@ -16,7 +18,7 @@ class GEventEventLoop(object):
             self._alarms.remove(gevent.getcurrent())
             callback()
         eventlet = gevent.spawn_later(seconds, callback)
-        self._alarms.add(eventlet)
+        self._alarms.append(eventlet)
         return eventlet             
 
     def remove_alarm(self, handle):
@@ -27,7 +29,9 @@ class GEventEventLoop(object):
     def watch_file(self, fd, callback):
         def _file_callback():
             while True:
+                self.logger.debug("Waiting for input on %d" % fd)
                 gevent.socket.wait_read(fd)
+                self.logger.debug("Done waiting for input on %d" % fd)
                 callback()
         eventlet = gevent.spawn(_file_callback)
         self._watch_files.append(eventlet)
@@ -38,7 +42,18 @@ class GEventEventLoop(object):
         handle.kill()
         self._watch_files.remove(handle)
         return True
-        
+
+    def enter_idle(self, callback):
+        self._idle_handle += 1
+        self._idle_callbacks[self._idle_handle] = callback
+        return self._idle_handle
+
+    def remove_enter_idle(self, handle):
+        try:
+            del self._idle_callbacks[handle]
+        except KeyError:
+            return False
+        return True
 
     def run(self):
         self.logger.debug("Running")
@@ -56,8 +71,9 @@ class GEventEventLoop(object):
         self.running = False
 
     def _loop(self):
-        #super(GEventEventLoop, self)._loop()
-        gevent.sleep(seconds=0.01)
+        for handle in self._idle_callbacks:
+            self._idle_callbacks[handle]()
+        gevent.sleep(seconds=0.1)
 
 class MainWidget(urwid.Frame):
     def __init__(self, client):
@@ -109,10 +125,9 @@ class TextWindow(Window):
             self.line_offset += travel * self.lines_on_show 
             if self.line_offset < 0:
                 self.line_offset = 0
-            logging.getLogger('client.render').debug('Paging in %d. Offset %d-%d' % (travel, before, self.line_offset))
             self._invalidate()
 
-        def cut_viewport(self, lines, maxrow): 
+        def cut_viewport(self, lines, attr, maxrow): 
             topline = self.line_offset
             bottomline = topline + maxrow
 
@@ -129,13 +144,15 @@ class TextWindow(Window):
             assert ((bottomline - topline) <= maxrow), 'Too many lines in viewport'
             logging.getLogger('client.render').debug('Top: %d Bottom: %d Offset: %d Len: %d' % (topline, bottomline, self.line_offset, len(lines)))
             self.line_offset = topline # Ensure lineoffset it kept up to date!
-            return lines[topline:bottomline]
+            return (lines[topline:bottomline], attr[topline:bottomline])
 
         def render(self, size, focus=False):
             (maxcol, maxrow) = size
 
             lines = reversed(self.window.lines) # Minor note, lines is inverted (element 0 is most recent)
+            logging.getLogger('client.render').debug('Rendering %s' % self)
             str_lines = []
+            attr_lines = []
             for line in lines:
                 str_time = line.time.strftime('%H:%M:%S ') # TODO: Make timestamp configurable
                 (offset, linesplit) = self.window.linesplit(line.content, maxcol - len(str_time))
@@ -146,17 +163,20 @@ class TextWindow(Window):
                 while i < lines_length:
                     linesplit[i] = combined_offset + linesplit[i]
                     i += 1
-                    
+
                 str_lines.extend(linesplit)
 
             if self.stick_bottom:
                 self.line_offset = len(str_lines) - maxrow
-                logging.getLogger('client.view').debug("Setting line_offset: %d" % self.line_offset)
                 if self.line_offset < 0:
                     self.line_offset = 0
 
-            str_lines = self.cut_viewport(str_lines, maxrow)
+            (str_lines, attr_lines) = self.cut_viewport(str_lines, attr_lines, maxrow)
             self.lines_on_show = len(str_lines)
+            for i in range(self.lines_on_show):
+                if isinstance(str_lines[i], unicode):
+                    str_lines[i] = str_lines[i].encode('ascii')
+            #canvas = urwid.TextCanvas(text=str_lines, attr=attr_lines, maxcol=maxcol)
             canvas = urwid.TextCanvas(text=str_lines, maxcol=maxcol)
             compcanvas = urwid.CompositeCanvas(canv=urwid.SolidCanvas('-', maxcol, maxrow))
             if canvas.rows() != 0:
@@ -224,6 +244,7 @@ class StatusWindow(TextWindow):
         self.log_handler.setLevel(logging.WARNING)
         self.log_handler.setFormatter(logging.Formatter("%(name)s - %(levelname)s - %(message)s"))
         logging.getLogger('').addHandler(self.log_handler)
+        self.emit('test')
 
     def client_message(self, message):
         self.add_line(StatusWindow.CLIENT_MSG_PREFIX + message)
@@ -292,12 +313,12 @@ class WindowManagerWidget(urwid.Frame):
         while self.client.running:
             self.statusline.refresh_content()
             self.client.mainloop.draw_screen() # Force a refresh (refresh typically happens on keypress, these don't come on keypress)
-            gevent.sleep(seconds=0.5)
+            gevent.sleep(seconds=1)
 
 class WindowWidget(urwid.Frame):
     def __init__(self, window):
         self.window = window
-        self.title_text = urwid.Text(' ' + window.title)
+        self.title_text = urwid.Text(' ' + window.title, wrap="clip")
         super(WindowWidget, self).__init__(window.widget, header=urwid.AttrMap(self.title_text, 'title'))
 
 
