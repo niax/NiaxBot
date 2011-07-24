@@ -1,3 +1,4 @@
 *.pyc
 *.swp
 logs/
+.settings.json

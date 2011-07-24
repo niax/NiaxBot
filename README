@@ -1,1 +1,5 @@
 Now a full IRC library. Old Niaxbot functionality in the legacy plugin
+
+Plugins:
+    - Legacy - Handles old-style Niaxbot functionality
+    - Twitter - Adds ability to tweet from IRC channels
