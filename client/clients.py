@@ -3,17 +3,13 @@ from gevent import monkey; monkey.patch_socket()
 import logging
 import sys
 
-#import curses
-#import curses.wrapper # Wraps curses stuff to ensure terminal returns to the correct state
-#import curses.ascii
-import urwid
-
 from irc.server import IrcServer
 import irc.signals
 import irc.plugins
 
 class BasicClient(object):
     VERSIONSTRING = "PyRC v0.0.1 (First Steps) - https://github.com/niax/Niaxbot"
+    SETTINGSPATH = '.settings.json'
 
     def __init__(self):
         self.servers = {}
@@ -24,16 +20,21 @@ class BasicClient(object):
         irc.signals.add('event 433', self.nick_in_use)
         irc.signals.add('ctcp cmd', self.on_ctcp)
 
+
         # Mapping between commands and functions
         command_mapping = {
             'select': self.select_server,
             'connect' : self.connect,
             'quit': self.quit,
+            'reload': self.reload_settings,
+            'save': self.save_settings,
         }
 
         # Map commands
         for command in command_mapping:
             irc.signals.add('command %s' % command, command_mapping[command])
+
+        self.reload_settings([]) # Pass in empty arguments
 
     def run(self):
         # TODO: Implement proper plugin autoload
@@ -48,6 +49,14 @@ class BasicClient(object):
     def localloop(self):
         import fcntl, sys, os
         fcntl.fcntl(sys.stdin, fcntl.F_SETFL, os.O_NONBLOCK) # make the file nonblocking
+
+        # Do autoconnects
+        servers = irc.settings.get('client.servers')
+        if servers == None: # Set servers to empty list if non-existant
+            servers = []
+            irc.settings.set('client.servers', servers)
+        for server in servers:
+            self.connect(server['name'])
 
         while self.running:
             try:
@@ -97,6 +106,20 @@ class BasicClient(object):
             self.servers[servername].disconnect(args)
             self.servers[servername].wait()
         self.running = False
+
+    def reload_settings(self, args):
+        self.logger.info('Loading settings')
+        file = open(self.SETTINGSPATH, 'r')
+        settings_str = file.read()
+        irc.settings.load_json(settings_str)
+        file.close()
+
+    def save_settings(self, args):
+        self.logger.info('Saving settings')
+        file = open(self.SETTINGSPATH, 'w')
+        settings_str = irc.settings.dump_json()
+        file.write(settings_str)
+        file.close()
 
     def on_ctcp(self, server, command, message, query, prefix):
         if command == "VERSION" and message == "": # VERSION request
