@@ -50,14 +50,6 @@ class BasicClient(object):
         import fcntl, sys, os
         fcntl.fcntl(sys.stdin, fcntl.F_SETFL, os.O_NONBLOCK) # make the file nonblocking
 
-        # Load auto-load plugins
-        autoload_plugins = irc.settings.get('client.autoload_plugins')
-        if autoload_plugins == None:
-            autoload_plugins = []
-            irc.settings.set('client.autoload_plugins', autoload_plugins)
-        for plugin in autoload_plugins:
-            irc.plugins.load_plugin(plugin)
-
         # Do autoconnects
         servers = irc.settings.get('client.servers')
         if servers == None: # Set servers to empty list if non-existant

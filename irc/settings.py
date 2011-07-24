@@ -36,6 +36,7 @@ def set(key, value):
 def load_json(json):
     global settings
     settings = simplejson.loads(json)
+    signals.emit('settings load', [])
 
 def dump_json():
     global settings

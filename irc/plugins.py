@@ -1,4 +1,6 @@
 import signals
+import settings
+
 import imp
 import logging
 import os.path
@@ -45,4 +47,14 @@ def command(args):
         for module in modules:
             logger.info(module)
 
+def on_settings_load():
+    autoload_plugins = settings.get('plugins.autoload')
+    if autoload_plugins == None:
+        autoload_plugins = []
+        settings.set('plugins.autoload', autoload_plugins)
+    for plugin in autoload_plugins:
+        load_plugin(plugin)
+
+
 signals.add("command plugin", command)
+signals.add("settings load", on_settings_load)
