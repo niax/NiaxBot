@@ -108,14 +108,14 @@ def do_update(server):
     """Pull in a new configuration file"""
     # Create the connection and request the target
     try:
-        refreshHost = irc.settings.get('legacy_refreshHost')
-        refreshTarget = irc.settings.get('legacy_refreshTarget')
+        refreshHost = irc.settings.get('legacy.refreshHost')
+        refreshTarget = irc.settings.get('legacy.refreshTarget')
 
         if refreshHost == None:
-            logger.warn("Refresh Host is not set (please set legacy_refreshHost)")
+            logger.warn("Refresh Host is not set (please set legacy.refreshHost)")
             return
         if refreshTarget == None:
-            logger.warn("Refresh Target is not set (please set legacy_refreshTarget)")
+            logger.warn("Refresh Target is not set (please set legacy.refreshTarget)")
             return
         httpcon = HTTPConnection(refreshHost)
         httpcon.request("GET", "/%s" % refreshTarget)
@@ -160,9 +160,9 @@ def do_receive(server, message, query, prefix, matches):
         params = urllib.urlencode(params)
         headers = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/plain"}
         try:
-            refreshHost = irc.settings.get('legacy_refreshHost')
+            refreshHost = irc.settings.get('legacy.refreshHost')
             if refreshHost == None:
-                logger.warn("Refresh Host is not set (please set legacy_refreshHost)")
+                logger.warn("Refresh Host is not set (please set legacy.refreshHost)")
                 return
             # Set up the connection
             httpcon = HTTPConnection(refreshHost)
